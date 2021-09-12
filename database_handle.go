@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 	googlesearch "github.com/rocketlaunchr/google-search"
@@ -15,16 +14,9 @@ var ErrSqlInsert = errors.New("ErrSqlInsert: error inserting into database")
 var ErrRowExists = errors.New("ErrRowExists: error inserting duplicate value")
 
 func AddQuery(queryText string) (id int64, err error) {
-	// Open connection to database
-	db, err := sql.Open("mysql", "root:7622446@tcp(127.0.0.1:3306)/web_scrape")
-	if err != nil {
-		log.Fatal("Unable to open connection to db")
-	}
-	defer db.Close()
-
 	// CHECK IF ALREADY EXISTS
 	var existingId int64
-	err = db.QueryRow("SELECT id FROM queries WHERE query_text=?", queryText).Scan(&existingId)
+	err = DB.QueryRow("SELECT id FROM queries WHERE query_text=?", queryText).Scan(&existingId)
 	// If no rows exists it will throw an ErrNoRows. In that case I won't consider as actual error
 	if err != nil && err != sql.ErrNoRows {
 		return 0, ErrSqlSelect
@@ -35,7 +27,7 @@ func AddQuery(queryText string) (id int64, err error) {
 	}
 
 	// INSERT INTO DB
-	insert_stmt, err := db.Prepare("INSERT INTO queries (query_text) VALUES (?)")
+	insert_stmt, err := DB.Prepare("INSERT INTO queries (query_text) VALUES (?)")
 	if err != nil {
 		return 0, ErrSqlPrepare
 	}
@@ -51,16 +43,9 @@ func AddQuery(queryText string) (id int64, err error) {
 }
 
 func AddQueryResults(queryResult googlesearch.Result, queryId int64) (id int64, err error) {
-	// Open connection to database
-	db, err := sql.Open("mysql", "root:7622446@tcp(127.0.0.1:3306)/web_scrape")
-	if err != nil {
-		log.Fatal("Unable to open connection to db")
-	}
-	defer db.Close()
-
 	// CHECK IF ALREADY EXISTS, if so, throws error because I don't want to scrape that domain again
 	var exists bool
-	err = db.QueryRow("SELECT EXISTS (SELECT * FROM query_results WHERE url=?)", queryResult.URL).Scan(&exists)
+	err = DB.QueryRow("SELECT EXISTS (SELECT * FROM query_results WHERE url=?)", queryResult.URL).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return 0, ErrSqlSelect
 	}
@@ -69,7 +54,7 @@ func AddQueryResults(queryResult googlesearch.Result, queryId int64) (id int64, 
 		return 0, ErrRowExists
 	}
 
-	stmt, err := db.Prepare("INSERT INTO query_results (result_rank, title, url, description, query_id) VALUES (?,?,?,?,?)")
+	stmt, err := DB.Prepare("INSERT INTO query_results (result_rank, title, url, description, query_id) VALUES (?,?,?,?,?)")
 	if err != nil {
 		return 0, ErrSqlPrepare
 	}
@@ -85,14 +70,7 @@ func AddQueryResults(queryResult googlesearch.Result, queryId int64) (id int64, 
 }
 
 func AddPage(pageText string, domain string, pageUrl string, resultId int64) error {
-	// Open connection to database
-	db, err := sql.Open("mysql", "root:7622446@tcp(127.0.0.1:3306)/web_scrape")
-	if err != nil {
-		log.Fatal("Unable to open connection to db")
-	}
-	defer db.Close()
-
-	stmt, err := db.Prepare("INSERT IGNORE INTO pages (domain, page_url, page_text, query_result_id) VALUES (?,?,?,?)")
+	stmt, err := DB.Prepare("INSERT IGNORE INTO pages (domain, page_url, page_text, query_result_id) VALUES (?,?,?,?)")
 	if err != nil {
 		return ErrSqlPrepare
 	}
