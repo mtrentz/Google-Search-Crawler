@@ -9,10 +9,22 @@ import (
 )
 
 func CrawlURL(resultUrl string, resultId int64) {
+	const MAXPAGES = 5
+	var counter int
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("exit crawl")
+			return
+		}
+	}()
+
 	// Parse URL
 	u, err := url.Parse(resultUrl)
 	if err != nil {
-		log.Fatal(err)
+		// If cant parse URL, just exists function
+		// TODO: this should also log
+		fmt.Printf("Error parsing url for: %s\n", resultUrl)
+		return
 	}
 	domain := u.Hostname()
 
@@ -32,8 +44,15 @@ func CrawlURL(resultUrl string, resultId int64) {
 		if err != nil {
 			log.Panic(err)
 		}
-		AddPage(pageText, domain, pageUrl, resultId)
+		err = AddPage(pageText, domain, pageUrl, resultId)
+		if err != nil {
+			fmt.Println("Error adding page into database", err)
+		}
+		counter++
 
+		if counter >= MAXPAGES {
+			panic("Exit")
+		}
 	})
 
 	// On every a element which has href attribute call callback
@@ -44,6 +63,9 @@ func CrawlURL(resultUrl string, resultId int64) {
 
 	// Before making a request print "Visiting ..."
 	c.OnRequest(func(r *colly.Request) {
+		if counter >= MAXPAGES {
+			panic("Exit")
+		}
 		fmt.Println("Visiting", r.URL.String())
 	})
 
