@@ -19,12 +19,12 @@ func main() {
 	queries := bufio.NewScanner(file)
 
 	for queries.Scan() {
-		// TODO: Should always check if value already in DB. If so, should just go to next loop
 		queryText := queries.Text()
 
 		// Add query to database, get id
 		queryId, err := AddQuery(queryText)
 		if err != nil {
+			// TODO: This should log fail query log
 			fmt.Println("Failed to add query to database")
 			continue
 		}
@@ -32,7 +32,7 @@ func main() {
 		// Get top results of google
 		queryResults, err := GoogleSearch(queryText)
 		if err != nil {
-			// TODO: Tirar o erro de dentro da função
+			// TODO: Log to file and continue
 			fmt.Println("Error getting google search results")
 			continue
 		}
@@ -43,9 +43,11 @@ func main() {
 			// Add query result to database, get query id
 			resultId, err := AddQueryResults(res, queryId)
 			if err != nil {
+				// TODO: Log to file, if error, continue
 				fmt.Println("Failed to add query result to database")
 				continue
 			}
+			// Send to a recurisve crawl into that url domain
 			CrawlURL(res.URL, resultId)
 		}
 
