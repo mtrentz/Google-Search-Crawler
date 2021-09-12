@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	googlesearch "github.com/rocketlaunchr/google-search"
 )
@@ -17,7 +16,6 @@ func GoogleSearch(query string) ([]googlesearch.Result, error) {
 
 	returnLinks, err := googlesearch.Search(ctx, query, opts)
 	if err != nil {
-		fmt.Printf("something went wrong: %v", err)
 		return returnLinks, err
 	}
 
