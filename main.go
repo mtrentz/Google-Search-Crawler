@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// TODO: Change all print with file log.
 func main() {
 	// Open file of queries to Google
 	file, err := os.Open("queries.txt")
@@ -15,36 +16,35 @@ func main() {
 	}
 	defer file.Close()
 
-	// Loop over the lines in the file
 	queries := bufio.NewScanner(file)
 
+	// Loop over the lines in the file
 	for queries.Scan() {
 		queryText := queries.Text()
 
 		// Add query to database, get id
 		queryId, err := AddQuery(queryText)
 		if err != nil {
-			// TODO: This should log fail query log
-			fmt.Println("Failed to add query to database")
+			fmt.Println("Add query error ", err)
 			continue
 		}
 
 		// Get top results of google
 		queryResults, err := GoogleSearch(queryText)
+		// If no search result just go continue looping
 		if err != nil {
-			// TODO: Log to file and continue
-			fmt.Println("Error getting google search results")
+			fmt.Println("Error getting google search results ", err)
 			continue
 		}
 
 		// Loop on results, add them to database, and send them to web crawler
 		for _, res := range queryResults {
-			// res is a struct with fields Description, Rank, Title, URL
+			// res is a struct with fields {Description, Rank, Title, URL}
 			// Add query result to database, get query id
 			resultId, err := AddQueryResults(res, queryId)
 			if err != nil {
-				// TODO: Log to file, if error, continue
-				fmt.Println("Failed to add query result to database")
+				fmt.Println("Error adding query results ", err)
+				// Continue on internal loop, over results
 				continue
 			}
 			// Send to a recurisve crawl into that url domain
