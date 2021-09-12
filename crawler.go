@@ -11,8 +11,9 @@ import (
 func CrawlURL(resultUrl string, resultId int64) {
 	// Set a max amount of web pages that it should go through when crawling the resultUrl
 	// When exceeded, will panic and recover here, exiting the web crawler for this url.
-	const MAXSCRAPE = 5
-	const MAXVISIT = 20
+	const MAXSCRAPE = 20
+	// Just in case it gets on a weird loop with some redirects (some pages with page id that go nowhere do this...)
+	const MAXVISIT = 30
 	var scrapeCounter int
 	var visitCounter int
 	// Recover

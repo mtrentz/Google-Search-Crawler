@@ -50,7 +50,6 @@ func main() {
 	// Loop over the lines in the file
 	for queries.Scan() {
 		queryText := queries.Text()
-		fmt.Println(queryText)
 
 		// would block if guard channel is already filled
 		// guard <- struct{}{}
