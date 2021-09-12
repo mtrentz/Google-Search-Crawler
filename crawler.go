@@ -11,8 +11,10 @@ import (
 func CrawlURL(resultUrl string, resultId int64) {
 	// Set a max amount of web pages that it should go through when crawling the resultUrl
 	// When exceeded, will panic and recover here, exiting the web crawler for this url.
-	const MAXPAGES = 5
-	var counter int
+	const MAXSCRAPE = 5
+	const MAXVISIT = 20
+	var scrapeCounter int
+	var visitCounter int
 	// Recover
 	defer func() {
 		if r := recover(); r != nil {
@@ -53,22 +55,28 @@ func CrawlURL(resultUrl string, resultId int64) {
 		}
 
 		// Checks if already maxed out scraped per domain, if so, exits crawler
-		counter++
-		if counter >= MAXPAGES {
+		scrapeCounter++
+		// Check here also if already maxed out visits or scrapes, if so, exits crawler
+		if scrapeCounter >= MAXSCRAPE || visitCounter >= MAXVISIT {
 			panic("Exit")
 		}
 	})
 
 	// On every a element which has href attribute call callback
 	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		// Check here also if already maxed out visits or scrapes, if so, exits crawler
+		if scrapeCounter >= MAXSCRAPE || visitCounter >= MAXVISIT {
+			panic("Exit")
+		}
+		visitCounter++
 		link := e.Attr("href")
 		c.Visit(e.Request.AbsoluteURL(link))
 	})
 
 	// Before making a request print "Visiting ..."
 	c.OnRequest(func(r *colly.Request) {
-		// Check here also if already maxed out visits, if so, exits crawler
-		if counter >= MAXPAGES {
+		// Check here also if already maxed out visits or scrapes, if so, exits crawler
+		if scrapeCounter >= MAXSCRAPE || visitCounter >= MAXVISIT {
 			panic("Exit")
 		}
 		fmt.Println("Visiting", r.URL.String())
