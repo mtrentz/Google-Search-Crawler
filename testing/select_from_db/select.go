@@ -37,7 +37,7 @@ func main() {
 
 	// CHECK IF ALREADY EXISTS, if so, throws error because I don't want to scrape that domain again
 	var exists bool
-	testUrl := "https://www.maxiquim.com.br/"
+	testUrl := "https://www.maxiquims.com.br/"
 	err = db.QueryRow("SELECT EXISTS (SELECT * FROM query_results WHERE url=?)", testUrl).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		// TODO: Return error here
