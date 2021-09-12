@@ -9,13 +9,16 @@ docker run --rm -d -v mysql:/var/lib/mysql \
 -- docker exec -it websites-db bash
 -- mysql -u root -p
 
+/* DROP DATABASE */
+DROP DATABASE web_scrape;
+
 CREATE DATABASE web_scrape;
 
 USE web_scrape;
 
 CREATE TABLE IF NOT EXISTS queries (
     id INT NOT NULL AUTO_INCREMENT,
-    query_text VARCHAR(255),
+    query_text VARCHAR(255) UNIQUE,
     PRIMARY KEY (id)
 );
 
@@ -35,7 +38,7 @@ CREATE TABLE IF NOT EXISTS query_results (
 CREATE TABLE IF NOT EXISTS pages (
     id INT NOT NULL AUTO_INCREMENT,
     domain VARCHAR(255),
-    page_url VARCHAR(255),
+    page_url VARCHAR(255) UNIQUE,
     page_text TEXT,
     query_result_id INT,
     PRIMARY KEY (id),
@@ -46,6 +49,3 @@ CREATE TABLE IF NOT EXISTS pages (
 
 
 /* INSERT INTO pages (page) VALUES ("testing 123"); */
-
-/* DROP DATABASE */
-DROP DATABASE web_scrape;
