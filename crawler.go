@@ -9,11 +9,14 @@ import (
 )
 
 func CrawlURL(resultUrl string, resultId int64) {
+	// Set a max amount of web pages that it should go through when crawling the resultUrl
+	// When exceeded, will panic and recover here, exiting the web crawler for this url.
 	const MAXPAGES = 5
 	var counter int
+	// Recover
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("exit crawl")
+			log.Printf("Crawler exited when crawling base url %s\n", resultUrl)
 			return
 		}
 	}()
@@ -22,14 +25,13 @@ func CrawlURL(resultUrl string, resultId int64) {
 	u, err := url.Parse(resultUrl)
 	if err != nil {
 		// If cant parse URL, just exists function
-		// TODO: this should also log
-		fmt.Printf("Error parsing url for: %s\n", resultUrl)
+		log.Printf("Error parsing url for: %s\n", resultUrl)
 		return
 	}
 	domain := u.Hostname()
 
 	c := colly.NewCollector()
-	c.MaxDepth = 2
+	c.MaxDepth = 5
 	c.AllowedDomains = []string{domain}
 	c.AllowURLRevisit = false
 	// c.Async = true
@@ -42,14 +44,16 @@ func CrawlURL(resultUrl string, resultId int64) {
 		// Parse only the text
 		pageText, err := ParseHTML(pageHtml)
 		if err != nil {
-			log.Panic(err)
+			// This will exit the crawler
+			panic("Exit")
 		}
 		err = AddPage(pageText, domain, pageUrl, resultId)
 		if err != nil {
-			fmt.Println("Error adding page into database", err)
+			fmt.Printf("Error adding page into database for %s. %s\n", pageUrl, err)
 		}
-		counter++
 
+		// Checks if already maxed out scraped per domain, if so, exits crawler
+		counter++
 		if counter >= MAXPAGES {
 			panic("Exit")
 		}
@@ -63,6 +67,7 @@ func CrawlURL(resultUrl string, resultId int64) {
 
 	// Before making a request print "Visiting ..."
 	c.OnRequest(func(r *colly.Request) {
+		// Check here also if already maxed out visits, if so, exits crawler
 		if counter >= MAXPAGES {
 			panic("Exit")
 		}
