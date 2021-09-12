@@ -2,17 +2,34 @@ package main
 
 import (
 	"bufio"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 )
 
-// TODO: Change all print with file log.
+// Global database variable
+var DB *sql.DB
+
 func main() {
+	// Set up log file
+	logFile, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal("Error opening log file: ", err)
+	}
+	log.SetOutput(logFile)
+
+	// Connect to database, set it to global variable
+	DB, err = sql.Open("mysql", "root:7622446@tcp(127.0.0.1:3306)/web_scrape")
+	if err != nil {
+		log.Fatal("Unable to open connection to db: ", err)
+	}
+	defer DB.Close()
+
 	// Open file of queries to Google
 	file, err := os.Open("queries.txt")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error opening query file: ", err)
 	}
 	defer file.Close()
 
@@ -25,7 +42,7 @@ func main() {
 		// Add query to database, get id
 		queryId, err := AddQuery(queryText)
 		if err != nil {
-			fmt.Println("Add query error ", err)
+			log.Printf("Error adding query for %s. %s\n", queryText, err)
 			continue
 		}
 
@@ -33,7 +50,7 @@ func main() {
 		queryResults, err := GoogleSearch(queryText)
 		// If no search result just go continue looping
 		if err != nil {
-			fmt.Println("Error getting google search results ", err)
+			log.Printf("Error getting google search results for %s. %s\n", queryText, err)
 			continue
 		}
 
@@ -43,7 +60,7 @@ func main() {
 			// Add query result to database, get query id
 			resultId, err := AddQueryResults(res, queryId)
 			if err != nil {
-				fmt.Println("Error adding query results ", err)
+				log.Printf("Error adding query result for %s. %s\n", res.URL, err)
 				// Continue on internal loop, over results
 				continue
 			}
