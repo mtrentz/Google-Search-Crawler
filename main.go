@@ -7,11 +7,42 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 )
 
 // Global database variable
 var DB *sql.DB
 var wg sync.WaitGroup
+
+func connectDB() {
+
+	var err error
+
+	fmt.Println("Connecting to database...")
+	func() {
+		retries := 10
+		count := 0
+
+		for {
+			// Connect to database, set it to global variable
+			DB, err = sql.Open("mysql", "crawler:crawler@tcp(crawler_db:3308)/crawler")
+			if err != nil {
+				fmt.Println("Unable to open connection to db: ", err)
+			} else {
+				// If connected, exits function
+				return
+			}
+			fmt.Println("Trying again in 5 seconds.")
+			time.Sleep(time.Second * 5)
+			count++
+
+			if count >= retries {
+				log.Fatal("Could not connect to database, exiting: ", err)
+				return
+			}
+		}
+	}()
+}
 
 func main() {
 	// Set up log file
@@ -21,13 +52,7 @@ func main() {
 	}
 	log.SetOutput(logFile)
 
-	// Connect to database, set it to global variable
-	fmt.Println("Connecting to database...")
-	DB, err = sql.Open("mysql", "root:7622446@tcp(127.0.0.1:3306)/web_scrape")
-	if err != nil {
-		log.Fatal("Unable to open connection to db: ", err)
-	}
-	defer DB.Close()
+	connectDB()
 
 	// Open file of queries to Google
 	fmt.Println("Reading queries...")

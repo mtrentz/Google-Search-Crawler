@@ -1,0 +1,35 @@
+version: "3"
+services:
+  crawler_db:
+    build:
+      dockerfile: ./docker/db.dockerfile
+      context: .
+    container_name: crawler_db
+    ports:
+      - "3308:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=crawler
+      - MYSQL_DATABASE=crawler
+      - MYSQL_USER=crawler
+      - MYSQL_PASSWORD=crawler
+    volumes:
+      - /mysql:/var/lib/mysql
+    networks:
+      - net
+    
+  crawler:
+    build:
+      dockerfile: ./docker/crawler.dockerfile
+      context: .
+    image: crawler
+    container_name: crawler
+    volumes:
+      - .:/app/
+    networks:
+      - bridge
+    depends_on:
+      - "crawler_db"
+
+networks:
+  net:
+    driver: bridge  
