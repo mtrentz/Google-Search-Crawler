@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,6 +27,7 @@ func connectDB() {
 
 		for {
 			// Connect to database, set it to global variable
+			// TODO: Get OS Env variables from Docker Compose
 			DB, err = sql.Open("mysql", "crawler:crawler@tcp(crawler_db:3308)/crawler")
 			if err != nil {
 				fmt.Println("Unable to open connection to db: ", err)
@@ -72,6 +75,9 @@ func main() {
 	guard := make(chan int, maxGoroutines)
 	wg.Add(queriesCount)
 
+	// Load unallowed domains from file
+	var unallowedDomainsList = loadUnallowedDomainList()
+
 	// Loop over the lines in the file
 	for queries.Scan() {
 		queryText := queries.Text()
@@ -107,8 +113,17 @@ func main() {
 					// Continue on internal loop, over results
 					continue
 				}
-				// Send to a recurisve crawl into that url domain
-				CrawlURL(res.URL, resultId)
+
+				// Check if domain not on unallowed list
+				domain, err := getDomain(res.URL)
+				if err != nil {
+					return
+				}
+				if stringNotInSlice(domain, unallowedDomainsList) {
+					// Send to a recurisve crawl into that url domain
+					CrawlURL(res.URL, resultId)
+				}
+
 			}
 			wg.Done()
 			// Sends back info knowing it stopped a goroutine
@@ -138,4 +153,43 @@ func countFileLines(fileName string) (n int) {
 		lineCount++
 	}
 	return lineCount
+}
+
+func loadUnallowedDomainList() []string {
+	file, err := os.Open("unallowed_domains.txt")
+	if err != nil {
+		log.Fatal("Error opening unallowed domains list: ", err)
+	}
+	defer file.Close()
+
+	s := bufio.NewScanner(file)
+
+	var unallowedDomains []string
+	for s.Scan() {
+		unallowedDomains = append(unallowedDomains, s.Text())
+	}
+	return unallowedDomains
+}
+
+// Function to check if string is in NOT slice of strings
+func stringNotInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return false
+		}
+	}
+	return true
+}
+
+// Function to get the domain of a URL
+func getDomain(s string) (string, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		log.Printf("Error parsing domain of url: %s", err)
+		return "", err
+	}
+	parts := strings.Split(u.Hostname(), ".")
+	domain := parts[len(parts)-2] + "." + parts[len(parts)-1]
+
+	return domain, nil
 }

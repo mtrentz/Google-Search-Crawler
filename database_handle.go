@@ -13,6 +13,7 @@ var ErrSqlPrepare = errors.New("ErrSqlPrepare: error preparing sql statement")
 var ErrSqlInsert = errors.New("ErrSqlInsert: error inserting into database")
 var ErrRowExists = errors.New("ErrRowExists: error inserting duplicate value")
 
+// Adds the query text to a database. Used to know what website was already queried.
 func AddQuery(queryText string) (id int64, err error) {
 	// CHECK IF ALREADY EXISTS
 	var existingId int64
@@ -42,6 +43,8 @@ func AddQuery(queryText string) (id int64, err error) {
 	return lid, nil
 }
 
+// For each query text there will be many results.
+// Here each of the top 10 results from google will be stored, with title, url, description and the order in which they appeared on google
 func AddQueryResults(queryResult googlesearch.Result, queryId int64) (id int64, err error) {
 	// CHECK IF ALREADY EXISTS, if so, throws error because I don't want to scrape that domain again
 	var exists bool
@@ -69,6 +72,8 @@ func AddQueryResults(queryResult googlesearch.Result, queryId int64) (id int64, 
 
 }
 
+// For each page scraped all text will be stored. The crawler goes into sub-links on each page
+// so there will be a lot of pages that have the same query_result_id and the same domain.
 func AddPage(pageText string, domain string, pageUrl string, resultId int64) error {
 	stmt, err := DB.Prepare("INSERT IGNORE INTO pages (domain, page_url, page_text, query_result_id) VALUES (?,?,?,?)")
 	if err != nil {
