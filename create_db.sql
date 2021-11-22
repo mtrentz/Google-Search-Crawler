@@ -1,20 +1,6 @@
-/*
-docker run --rm -d -v mysql:/var/lib/mysql \
-  -v mysql_config:/etc/mysql -p 3306:3306 \
-  --name websites-db \
-  -e MYSQL_ROOT_PASSWORD=7622446 \
-  mysql:latest
-*/
+CREATE DATABASE IF NOT EXISTS crawler;
 
--- docker exec -it websites-db bash
--- mysql -u root -p
-
-/* DROP DATABASE */
-DROP DATABASE web_scrape;
-
-CREATE DATABASE web_scrape;
-
-USE web_scrape;
+USE crawler;
 
 CREATE TABLE IF NOT EXISTS queries (
     id INT NOT NULL AUTO_INCREMENT,
@@ -46,6 +32,3 @@ CREATE TABLE IF NOT EXISTS pages (
       REFERENCES query_results(id)
       ON DELETE CASCADE
 );
-
-
-/* INSERT INTO pages (page) VALUES ("testing 123"); */

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -27,12 +28,23 @@ func connectDB() {
 
 		for {
 			// Connect to database, set it to global variable
-			// TODO: Get OS Env variables from Docker Compose
-			DB, err = sql.Open("mysql", "crawler:crawler@tcp(crawler_db:3308)/crawler")
+			// Check if everything is set via Docker
+			_, variableSet := os.LookupEnv("MYSQL_PASSWORD")
+			if variableSet {
+				databaseUser := os.Getenv("MYSQL_USER")
+				databasePass := os.Getenv("MYSQL_PASSWORD")
+				databaseName := os.Getenv("MYSQL_DATABASE")
+				DB, err = sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(crawler_db:3306)/%s", databaseUser, databasePass, databaseName))
+			} else {
+				// Else, it tries to connect to a local database on port 3308.
+				DB, err = sql.Open("mysql", "crawler:crawler@tcp(localhost:3308)/crawler")
+			}
 			if err != nil {
 				fmt.Println("Unable to open connection to db: ", err)
 			} else {
 				// If connected, exits function
+				// Sleeps 5 seconds because there is a chance of database being up, but tables not yet created
+				time.Sleep(time.Second * 5)
 				return
 			}
 			fmt.Println("Trying again in 5 seconds.")
@@ -49,7 +61,7 @@ func connectDB() {
 
 func main() {
 	// Set up log file
-	logFile, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	logFile, err := os.OpenFile(path.Join("query_lists", "logs.txt"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal("Error opening log file: ", err)
 	}
@@ -59,7 +71,7 @@ func main() {
 
 	// Open file of queries to Google
 	fmt.Println("Reading queries...")
-	file, err := os.Open("queries.txt")
+	file, err := os.Open(path.Join("query_lists", "queries.txt"))
 	if err != nil {
 		log.Fatal("Error opening query file: ", err)
 	}
@@ -67,7 +79,7 @@ func main() {
 
 	queries := bufio.NewScanner(file)
 	// Get num of lines in file (passes file name to read file again)
-	queriesCount := countFileLines("queries.txt")
+	queriesCount := countFileLines(path.Join("query_lists", "queries.txt"))
 	fmt.Printf("Started scraping all %d google queries\n", queriesCount)
 
 	// Preparing setup for concurrency
@@ -84,10 +96,14 @@ func main() {
 
 		// would block if guard channel is already filled
 		// guard <- struct{}{}
-		guard <- 1 // will block if there is maxGoroutines ints in sem
+		guard <- 1 // will block if there is maxGoroutines
 
 		// Spin goroutines for each google query
 		go func() {
+			defer func() {
+				wg.Done()
+				<-guard
+			}()
 			// Add query to database, get id
 			queryId, err := AddQuery(queryText)
 			if err != nil {
@@ -125,9 +141,9 @@ func main() {
 				}
 
 			}
-			wg.Done()
+			// wg.Done()
 			// Sends back info knowing it stopped a goroutine
-			<-guard
+			// <-guard
 		}()
 
 	}
@@ -156,7 +172,7 @@ func countFileLines(fileName string) (n int) {
 }
 
 func loadUnallowedDomainList() []string {
-	file, err := os.Open("unallowed_domains.txt")
+	file, err := os.Open(path.Join("query_lists", "queries.txt"))
 	if err != nil {
 		log.Fatal("Error opening unallowed domains list: ", err)
 	}

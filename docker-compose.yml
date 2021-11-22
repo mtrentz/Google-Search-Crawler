@@ -1,6 +1,13 @@
-version: "3"
+version: "3.4"
+
+x-common-variables: &common-variables
+  MYSQL_ROOT_PASSWORD: crawler
+  MYSQL_DATABASE: crawler
+  MYSQL_USER: crawler
+  MYSQL_PASSWORD: crawler
+
 services:
-  crawler_db:
+  db:
     build:
       dockerfile: ./docker/db.dockerfile
       context: .
@@ -9,20 +16,22 @@ services:
       - "3308:3306"
     cap_add:
       - SYS_NICE
-    environment:
-      - MYSQL_ROOT_PASSWORD=crawler
-      - MYSQL_DATABASE=crawler
-      - MYSQL_USER=crawler
-      - MYSQL_PASSWORD=crawler
+    environment: *common-variables
     volumes:
-      - /mysql:/var/lib/mysql
+      - crawler:/var/lib/mysql
+    command: mysqld --init-file="/tmp/database/install_db.sql"
     
-  crawler:
+  app:
     build:
       dockerfile: ./docker/crawler.dockerfile
       context: .
     container_name: crawler
+    environment: *common-variables
     volumes:
-      - ./logs/:/app/
+      - ./query_lists/:/app/query_lists
     depends_on:
-      - "crawler_db"
+      - "db"
+  
+volumes:
+  crawler:
+    external: true
